@@ -1,0 +1,381 @@
+{
+  "name": "Shopping List Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f1269806-aab7-405a-acae-00d663f4e761",
+      "name": "Telegram Trigger",
+      "webhookId": "ee6af991-82d4-4da6-a9d6-09cd977d2d72",
+      "credentials": {
+        "telegramApi": {
+          "id": "LdI9qElofW5An3wR",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.text.toLowerCase().trim() }}",
+                    "rightValue": "список",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c2e902ca-9b28-4a78-9e0a-7365045d7b41"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Список"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ad56632c-1e8b-47bd-a235-3dc09eb88b31",
+                    "leftValue": "={{ $json.message.text.toLowerCase().trim() }}",
+                    "rightValue": "очистити",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Очистити"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -16
+      ],
+      "id": "91ed65ce-1ad3-46cf-a786-fe4ca4c0a6cc",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "g7r7mdaHhtV0ghs7",
+          "mode": "list",
+          "cachedResultName": "shopping_list",
+          "cachedResultUrl": "/projects/0wbLPAcX4WBiS5VE/datatables/g7r7mdaHhtV0ghs7"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "item": "={{ $json.message.text }}",
+            "added_by": "={{ $json.message.from.first_name }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "item",
+              "displayName": "item",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "added_by",
+              "displayName": "added_by",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        224
+      ],
+      "id": "31f36763-2a14-4284-a9b6-e2ca4aec3998",
+      "name": "Insert row"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=✅ Додано: {{ $('Telegram Trigger').item.json.message.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        224
+      ],
+      "id": "57731a6a-b725-4510-9d1c-ca4a930d77be",
+      "name": "Send a text message",
+      "webhookId": "eb567096-cfe5-4cff-99ca-4c09f032c859",
+      "credentials": {
+        "telegramApi": {
+          "id": "LdI9qElofW5An3wR",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "g7r7mdaHhtV0ghs7",
+          "mode": "list",
+          "cachedResultName": "shopping_list",
+          "cachedResultUrl": "/projects/0wbLPAcX4WBiS5VE/datatables/g7r7mdaHhtV0ghs7"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        -208
+      ],
+      "id": "ecf3f7a4-01c0-4d07-b616-538dea7e11e0",
+      "name": "Get row(s)",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json).filter(r => r.item);\n\nif (rows.length === 0) {\n  return [{ json: { text: '🛒 Список порожній' } }];\n}\n\nconst lines = rows.map((r, i) => `${i + 1}. ${r.item} (${r.added_by})`);\n\nreturn [{ json: { text: '🛒 Список покупок:\\n\\n' + lines.join('\\n') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -208
+      ],
+      "id": "bc728f85-4e2f-4ebc-824f-89f35160bdce",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        -208
+      ],
+      "id": "75c8aeb4-2356-4e52-81ab-fe97fbada0a3",
+      "name": "Send a text message1",
+      "webhookId": "d2d506d7-a649-4e05-b687-06a9b717ade2",
+      "credentials": {
+        "telegramApi": {
+          "id": "LdI9qElofW5An3wR",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "value": "g7r7mdaHhtV0ghs7",
+          "mode": "list",
+          "cachedResultName": "shopping_list",
+          "cachedResultUrl": "/projects/0wbLPAcX4WBiS5VE/datatables/g7r7mdaHhtV0ghs7"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "condition": "gt",
+              "keyValue": "0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        464,
+        0
+      ],
+      "id": "aa0b1dda-72e8-4178-b39a-1c7c32c50673",
+      "name": "Delete row(s)",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "🧹 Список очищено!",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        688,
+        0
+      ],
+      "id": "3ecc3892-d716-4658-a1b2-2127f38034cc",
+      "name": "Send a text message2",
+      "webhookId": "7d058e9a-8d88-46e6-b32f-e156760b31f8",
+      "credentials": {
+        "telegramApi": {
+          "id": "LdI9qElofW5An3wR",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete row(s)": {
+      "main": [
+        [
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b0b138d3-f521-472e-965a-498834912c91",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4f2547978e3c69aa4d656c12c9e1cf1d60e1c66fa6117752f4170f50b4de021a"
+  },
+  "nodeGroups": [],
+  "id": "0PxdnWMrboedSIfU",
+  "tags": []
+}
