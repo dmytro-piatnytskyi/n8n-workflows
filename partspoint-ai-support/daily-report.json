@@ -1,0 +1,203 @@
+{
+  "name": "PartsPoint - Щоденний звіт",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 19
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -256,
+        -80
+      ],
+      "id": "71cf9ba8-1756-4a95-a5df-9d0695679e00",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "PartsPoint Авто - дані магазину",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2116000254,
+          "mode": "list",
+          "cachedResultName": "Журнал",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=2116000254"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -32,
+        -80
+      ],
+      "id": "cc249086-876c-4c51-a0cd-1b0759d724a5",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = DateTime.now().setZone('Europe/Kyiv').toFormat('dd.MM.yyyy');\n\nconst rows = $input.all()\n  .map(i => i.json)\n  .filter(r => String(r['Дата'] || '').startsWith(today));\n\nconst clients = new Set(rows.map(r => r.chat_id)).size;\n\nconst dialogs = rows.map((r, i) =>\n  `${i + 1}. [${r['Дата']}] ${r['Клієнт']}\\nПитання: ${r['Питання клієнта']}\\nВідповідь бота: ${String(r['Відповідь бота'] || '').slice(0, 400)}`\n).join('\\n\\n');\n\nreturn [{ json: { today, total: rows.length, clients, dialogs } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        -80
+      ],
+      "id": "46681f83-6b14-45f0-a287-fcc01bb016b4",
+      "name": "Записи за сьогодні"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Ти - аналітик служби підтримки інтернет-магазину автозапчастин «PartsPoint Авто». Ось усі діалоги клієнтів з AI-консультантом за {{ $json.today }}.\n\nКількість звернень: {{ $json.total }}\nУнікальних клієнтів: {{ $json.clients }}\n\nДІАЛОГИ:\n{{ $json.dialogs || 'Сьогодні звернень не було.' }}\n\nСклади короткий звіт для власника магазину українською. Без Markdown (без зірочок і решіток), списки через дефіс. Структура:\n\n📊 Звіт підтримки PartsPoint Авто за {{ $json.today }}\n\n👥 Звернень: ... | Клієнтів: ...\n\n🔝 Найчастіші теми:\n- (3-5 тем з кількістю)\n\n🆘 Передано менеджеру: (скільки і з яких питань - дивись, де бот пише, що передав питання менеджеру)\n\n❓ На що бот не зміг відповісти:\n- (питання, де бот сказав, що не знає, що уточнить менеджер, або відповів неповно)\n\n💡 Що додати в базу знань:\n- (1-3 конкретні пропозиції)\n\nЯкщо звернень не було - коротко напиши, що за день звернень не було. Не вигадуй того, чого немає в діалогах.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        416,
+        -80
+      ],
+      "id": "5a930ecf-ed8a-4b45-881b-38d38ee529ce",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        416,
+        80
+      ],
+      "id": "3d69c2f6-c2ca-4453-b266-8dc2afed5ec4",
+      "name": "AI-аналітик",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_MANAGERS_GROUP_CHAT_ID",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        -80
+      ],
+      "id": "df4f4e05-2b9a-4599-94bd-7ddc33fc4599",
+      "name": "Звіт менеджерам",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram PartsPoint"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Записи за сьогодні",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Записи за сьогодні": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI-аналітик": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Звіт менеджерам",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "Europe/Kyiv",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "d24f3fc8-636d-4c4c-910c-2f035937a1e8",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "id": "vYpyAiyPuy7Zu4iW",
+  "tags": []
+}
