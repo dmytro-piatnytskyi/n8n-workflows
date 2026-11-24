@@ -1,4 +1,4 @@
-# PartsPoint Auto: AI Sales Assistant for an Auto Parts Store
+# PartsPoint Auto: AI Support Agent for an Online Auto Parts Store
 
 A Telegram AI assistant for a fictional online auto parts store in Kharkiv, Ukraine. It's built with self-hosted n8n and answers customers the way a good store employee would: it explains delivery and returns, finds parts that fit a specific car, checks order status, and hands tricky questions over to a human manager.
 
